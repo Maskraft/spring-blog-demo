@@ -10,10 +10,10 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-// 記事エンティティ。データベーステーブル post に対応
+// 記事エンティティ。データベーステーブル article に対応
 @Entity
-@Table(name = "post")
-public class Post {
+@Table(name = "article")
+public class Article {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,10 +31,10 @@ public class Post {
     @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
-    public Post() {
+    public Article() {
     }
 
-    public Post(String title, String content) {
+    public Article(String title, String content) {
         this.title = title;
         this.content = content;
     }

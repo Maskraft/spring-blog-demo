@@ -1,5 +1,5 @@
 // バックエンドが返す記事オブジェクト
-export interface Post {
+export interface Article {
   id: number
   title: string
   content: string
@@ -8,7 +8,7 @@ export interface Post {
 }
 
 // 記事作成 / 更新用リクエストボディ
-export interface PostRequest {
+export interface ArticleRequest {
   title: string
   content: string
 }

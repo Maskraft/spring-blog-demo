@@ -1,6 +1,6 @@
-import type { ApiError, Post, PostRequest } from '../types/post'
+import type { ApiError, Article, ArticleRequest } from '../types/article'
 
-const BASE_URL = '/api/posts'
+const BASE_URL = '/api/articles'
 
 // レスポンス統一処理：2xx 以外はバックエンドの message を持つエラーをスローする
 async function handleResponse<T>(res: Response): Promise<T> {
@@ -23,31 +23,31 @@ async function handleResponse<T>(res: Response): Promise<T> {
   throw new Error(message)
 }
 
-export function listPosts(): Promise<Post[]> {
-  return fetch(BASE_URL).then((res) => handleResponse<Post[]>(res))
+export function listArticles(): Promise<Article[]> {
+  return fetch(BASE_URL).then((res) => handleResponse<Article[]>(res))
 }
 
-export function getPost(id: number): Promise<Post> {
-  return fetch(`${BASE_URL}/${id}`).then((res) => handleResponse<Post>(res))
+export function getArticle(id: number): Promise<Article> {
+  return fetch(`${BASE_URL}/${id}`).then((res) => handleResponse<Article>(res))
 }
 
-export function createPost(data: PostRequest): Promise<Post> {
+export function createArticle(data: ArticleRequest): Promise<Article> {
   return fetch(BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  }).then((res) => handleResponse<Post>(res))
+  }).then((res) => handleResponse<Article>(res))
 }
 
-export function updatePost(id: number, data: PostRequest): Promise<Post> {
+export function updateArticle(id: number, data: ArticleRequest): Promise<Article> {
   return fetch(`${BASE_URL}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  }).then((res) => handleResponse<Post>(res))
+  }).then((res) => handleResponse<Article>(res))
 }
 
-export function deletePost(id: number): Promise<void> {
+export function deleteArticle(id: number): Promise<void> {
   return fetch(`${BASE_URL}/${id}`, { method: 'DELETE' }).then((res) =>
     handleResponse<void>(res),
   )

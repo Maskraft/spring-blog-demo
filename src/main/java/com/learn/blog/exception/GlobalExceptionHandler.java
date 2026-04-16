@@ -14,8 +14,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(PostNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(PostNotFoundException ex) {
+    @ExceptionHandler(ArticleNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(ArticleNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(buildBody(HttpStatus.NOT_FOUND, ex.getMessage()));
     }

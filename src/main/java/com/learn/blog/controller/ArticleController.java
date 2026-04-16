@@ -1,8 +1,8 @@
 package com.learn.blog.controller;
 
-import com.learn.blog.dto.PostRequest;
-import com.learn.blog.entity.Post;
-import com.learn.blog.service.PostService;
+import com.learn.blog.dto.ArticleRequest;
+import com.learn.blog.entity.Article;
+import com.learn.blog.service.ArticleService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,43 +17,43 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URI;
 import java.util.List;
 
-// 記事の REST API。共通プレフィックスは /api/posts
+// 記事の REST API。共通プレフィックスは /api/articles
 @RestController
-@RequestMapping("/api/posts")
-public class PostController {
+@RequestMapping("/api/articles")
+public class ArticleController {
 
-    private final PostService postService;
+    private final ArticleService articleService;
 
-    public PostController(PostService postService) {
-        this.postService = postService;
+    public ArticleController(ArticleService articleService) {
+        this.articleService = articleService;
     }
 
     @GetMapping
-    public List<Post> list() {
-        return postService.findAll();
+    public List<Article> list() {
+        return articleService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Post getOne(@PathVariable Long id) {
-        return postService.findById(id);
+    public Article getOne(@PathVariable Long id) {
+        return articleService.findById(id);
     }
 
     @PostMapping
-    public ResponseEntity<Post> create(@Valid @RequestBody PostRequest request) {
-        Post created = postService.create(request);
+    public ResponseEntity<Article> create(@Valid @RequestBody ArticleRequest request) {
+        Article created = articleService.create(request);
         return ResponseEntity
-                .created(URI.create("/api/posts/" + created.getId()))
+                .created(URI.create("/api/articles/" + created.getId()))
                 .body(created);
     }
 
     @PutMapping("/{id}")
-    public Post update(@PathVariable Long id, @Valid @RequestBody PostRequest request) {
-        return postService.update(id, request);
+    public Article update(@PathVariable Long id, @Valid @RequestBody ArticleRequest request) {
+        return articleService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        postService.delete(id);
+        articleService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

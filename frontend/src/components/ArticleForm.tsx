@@ -1,16 +1,16 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { PostRequest } from '../types/post'
-import styles from './PostForm.module.css'
+import type { ArticleRequest } from '../types/article'
+import styles from './ArticleForm.module.css'
 
 interface Props {
-  initial?: PostRequest
+  initial?: ArticleRequest
   submitLabel: string
-  onSubmit: (data: PostRequest) => Promise<void>
+  onSubmit: (data: ArticleRequest) => Promise<void>
 }
 
 // 作成・編集共通フォームコンポーネント
-function PostForm({ initial, submitLabel, onSubmit }: Props) {
+function ArticleForm({ initial, submitLabel, onSubmit }: Props) {
   const navigate = useNavigate()
   const [title, setTitle] = useState(initial?.title ?? '')
   const [content, setContent] = useState(initial?.content ?? '')
@@ -66,4 +66,4 @@ function PostForm({ initial, submitLabel, onSubmit }: Props) {
   )
 }
 
-export default PostForm
+export default ArticleForm
