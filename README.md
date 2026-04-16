@@ -6,7 +6,7 @@
 
 - **バックエンド**：Java 21 · Spring Boot 3.4 · Spring Data JPA · H2 インメモリデータベース
 - **フロントエンド**：React 19 · Vite 6 · TypeScript 5.7 · React Router 7
-- **パッケージ管理**:Maven(バックエンド)· pnpm(フロントエンド)
+- **パッケージ管理**：Maven(バックエンド)· pnpm(フロントエンド)
 
 ## 動作環境
 
