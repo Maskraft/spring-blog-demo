@@ -1,14 +1,15 @@
 package com.learn.blog.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import org.hibernate.annotations.CreationTimestamp;
 
 // 記事エンティティ。データベーステーブル article に対応
 @Entity
@@ -31,8 +32,7 @@ public class Article {
     @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
-    public Article() {
-    }
+    public Article() {}
 
     public Article(String title, String content) {
         this.title = title;

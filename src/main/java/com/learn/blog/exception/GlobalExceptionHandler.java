@@ -1,14 +1,14 @@
 package com.learn.blog.exception;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 // グローバル例外ハンドラ：業務例外とバリデーション例外を統一した JSON エラーレスポンスに変換
 @RestControllerAdvice
@@ -21,11 +21,13 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
-                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
-                .reduce((a, b) -> a + "; " + b)
-                .orElse("パラメータの検証に失敗しました");
+    public ResponseEntity<Map<String, Object>> handleValidation(
+            MethodArgumentNotValidException ex) {
+        String message =
+                ex.getBindingResult().getFieldErrors().stream()
+                        .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                        .reduce((a, b) -> a + "; " + b)
+                        .orElse("パラメータの検証に失敗しました");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildBody(HttpStatus.BAD_REQUEST, message));
     }

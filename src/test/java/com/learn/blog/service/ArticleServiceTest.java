@@ -1,21 +1,5 @@
 package com.learn.blog.service;
 
-import com.learn.blog.dto.ArticleRequest;
-import com.learn.blog.dto.ArticleResponse;
-import com.learn.blog.entity.Article;
-import com.learn.blog.exception.ArticleNotFoundException;
-import com.learn.blog.repository.ArticleRepository;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,15 +8,30 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.learn.blog.dto.ArticleRequest;
+import com.learn.blog.dto.ArticleResponse;
+import com.learn.blog.entity.Article;
+import com.learn.blog.exception.ArticleNotFoundException;
+import com.learn.blog.repository.ArticleRepository;
+
 // ArticleService のビジネスロジックを Mockito で検証する単体テスト
 @ExtendWith(MockitoExtension.class)
 class ArticleServiceTest {
 
-    @Mock
-    private ArticleRepository articleRepository;
+    @Mock private ArticleRepository articleRepository;
 
-    @InjectMocks
-    private ArticleService articleService;
+    @InjectMocks private ArticleService articleService;
 
     // テスト用の Article を作成（id と createdAt を明示的に設定）
     private Article newArticle(Long id, String title, String content) {

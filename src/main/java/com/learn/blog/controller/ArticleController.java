@@ -1,9 +1,10 @@
 package com.learn.blog.controller;
 
-import com.learn.blog.dto.ArticleRequest;
-import com.learn.blog.dto.ArticleResponse;
-import com.learn.blog.service.ArticleService;
+import java.net.URI;
+import java.util.List;
+
 import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,8 +15,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.net.URI;
-import java.util.List;
+import com.learn.blog.dto.ArticleRequest;
+import com.learn.blog.dto.ArticleResponse;
+import com.learn.blog.service.ArticleService;
 
 // 記事の REST API。共通プレフィックスは /api/v1/articles（API バージョニング）
 @RestController
@@ -41,13 +43,12 @@ public class ArticleController {
     @PostMapping
     public ResponseEntity<ArticleResponse> create(@Valid @RequestBody ArticleRequest request) {
         ArticleResponse created = articleService.create(request);
-        return ResponseEntity
-                .created(URI.create("/api/v1/articles/" + created.id()))
-                .body(created);
+        return ResponseEntity.created(URI.create("/api/v1/articles/" + created.id())).body(created);
     }
 
     @PutMapping("/{id}")
-    public ArticleResponse update(@PathVariable Long id, @Valid @RequestBody ArticleRequest request) {
+    public ArticleResponse update(
+            @PathVariable Long id, @Valid @RequestBody ArticleRequest request) {
         return articleService.update(id, request);
     }
 

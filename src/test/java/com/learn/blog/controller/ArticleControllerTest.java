@@ -1,21 +1,5 @@
 package com.learn.blog.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.learn.blog.dto.ArticleRequest;
-import com.learn.blog.dto.ArticleResponse;
-import com.learn.blog.exception.ArticleNotFoundException;
-import com.learn.blog.service.ArticleService;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.LocalDateTime;
-import java.util.List;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -32,21 +16,36 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.learn.blog.dto.ArticleRequest;
+import com.learn.blog.dto.ArticleResponse;
+import com.learn.blog.exception.ArticleNotFoundException;
+import com.learn.blog.service.ArticleService;
+
 // ArticleController の HTTP 層テスト。Service をモック化し、ルーティング・バリデーション・例外処理を検証する
 @WebMvcTest(ArticleController.class)
 class ArticleControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private ArticleService articleService;
+    @MockitoBean private ArticleService articleService;
 
     private ArticleResponse sampleResponse(Long id) {
-        return new ArticleResponse(id, "タイトル" + id, "本文" + id, LocalDateTime.of(2026, 4, 17, 10, 0));
+        return new ArticleResponse(
+                id, "タイトル" + id, "本文" + id, LocalDateTime.of(2026, 4, 17, 10, 0));
     }
 
     @Test
@@ -93,9 +92,10 @@ class ArticleControllerTest {
         ArticleRequest request = new ArticleRequest("新タイトル", "新本文");
         when(articleService.create(any(ArticleRequest.class))).thenReturn(sampleResponse(10L));
 
-        mockMvc.perform(post("/api/v1/articles")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        post("/api/v1/articles")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/articles/10"))
                 .andExpect(jsonPath("$.id").value(10));
@@ -106,12 +106,14 @@ class ArticleControllerTest {
     void create_returnsBadRequestWhenTitleBlank() throws Exception {
         String json = "{\"title\":\"\",\"content\":\"本文\"}";
 
-        mockMvc.perform(post("/api/v1/articles")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+        mockMvc.perform(
+                        post("/api/v1/articles")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("title")));
+                .andExpect(
+                        jsonPath("$.message").value(org.hamcrest.Matchers.containsString("title")));
         verify(articleService, never()).create(any());
     }
 
@@ -120,11 +122,14 @@ class ArticleControllerTest {
     void create_returnsBadRequestWhenContentBlank() throws Exception {
         String json = "{\"title\":\"タイトル\",\"content\":\"\"}";
 
-        mockMvc.perform(post("/api/v1/articles")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+        mockMvc.perform(
+                        post("/api/v1/articles")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(json))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("content")));
+                .andExpect(
+                        jsonPath("$.message")
+                                .value(org.hamcrest.Matchers.containsString("content")));
     }
 
     @Test
@@ -133,22 +138,26 @@ class ArticleControllerTest {
         String longTitle = "あ".repeat(201);
         String json = "{\"title\":\"" + longTitle + "\",\"content\":\"本文\"}";
 
-        mockMvc.perform(post("/api/v1/articles")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+        mockMvc.perform(
+                        post("/api/v1/articles")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(json))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("200")));
+                .andExpect(
+                        jsonPath("$.message").value(org.hamcrest.Matchers.containsString("200")));
     }
 
     @Test
     @DisplayName("PUT /api/v1/articles/{id}: 正常な更新で 200 OK")
     void update_returnsOk() throws Exception {
         ArticleRequest request = new ArticleRequest("更新後", "更新本文");
-        when(articleService.update(eq(1L), any(ArticleRequest.class))).thenReturn(sampleResponse(1L));
+        when(articleService.update(eq(1L), any(ArticleRequest.class)))
+                .thenReturn(sampleResponse(1L));
 
-        mockMvc.perform(put("/api/v1/articles/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        put("/api/v1/articles/1")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
     }
@@ -160,9 +169,10 @@ class ArticleControllerTest {
         when(articleService.update(eq(99L), any(ArticleRequest.class)))
                 .thenThrow(new ArticleNotFoundException(99L));
 
-        mockMvc.perform(put("/api/v1/articles/99")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        put("/api/v1/articles/99")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
     }

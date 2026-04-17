@@ -1,14 +1,15 @@
 package com.learn.blog.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.learn.blog.dto.ArticleRequest;
 import com.learn.blog.dto.ArticleResponse;
 import com.learn.blog.entity.Article;
 import com.learn.blog.exception.ArticleNotFoundException;
 import com.learn.blog.repository.ArticleRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 // ビジネスサービス層：記事の CRUD 操作をカプセル化
 @Service
@@ -23,9 +24,7 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> findAll() {
-        return articleRepository.findAll().stream()
-                .map(ArticleResponse::from)
-                .toList();
+        return articleRepository.findAll().stream().map(ArticleResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
@@ -54,7 +53,6 @@ public class ArticleService {
 
     // 内部で使用するエンティティ取得メソッド。存在しない場合は例外を投げる
     private Article getArticle(Long id) {
-        return articleRepository.findById(id)
-                .orElseThrow(() -> new ArticleNotFoundException(id));
+        return articleRepository.findById(id).orElseThrow(() -> new ArticleNotFoundException(id));
     }
 }
