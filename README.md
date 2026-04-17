@@ -102,9 +102,32 @@ SpringBlog/
 cd C:\Users\maskr\IdeaProjects\SpringBlog
 
 mvn spring-boot:run                         # 開発モードで起動
-mvn clean package -DskipTests               # jar をビルド
+mvn clean package                           # テスト + API ドキュメント生成 + jar ビルド
+mvn clean package -DskipTests               # jar のみビルド（テストをスキップ。スニペットは生成されない）
 java -jar target\spring-blog-0.0.1-SNAPSHOT.jar
 ```
+
+#### テスト・コード品質
+
+```powershell
+mvn test                                    # ユニットテスト + アーキテクチャテスト + ドキュメント生成
+mvn verify                                  # 上記に加え Spotless check（書式違反でビルド失敗）
+mvn spotless:apply                          # Google Java Format (AOSP) で一括整形
+mvn spotless:check                          # 書式違反の検出のみ
+```
+
+テストの内訳：
+
+| テストクラス | 件数 | 目的 |
+|------|------|------|
+| `ArticleServiceTest` | 9 | Mockito による Service 層の単体テスト |
+| `ArticleControllerTest` | 11 | `@WebMvcTest` + MockMvc による HTTP 層テスト |
+| `ArchitectureTest` | 6 | ArchUnit によるアーキテクチャ制約（レイヤー依存・パッケージ配置・`@Transactional` 配置） |
+| `ArticleApiDocumentation` | 7 | Spring REST Docs による API ドキュメント用スニペット生成 |
+
+#### API ドキュメント
+
+`mvn package` 実行後、`target/generated-docs/index.html` をブラウザで開くと、各エンドポイントの仕様書を閲覧できます。ソースは [src/main/asciidoc/index.adoc](src/main/asciidoc/index.adoc) に記述されており、HTTP リクエスト例・レスポンス例・フィールド定義は `ArticleApiDocumentation` テストの実行結果から自動生成されます。
 
 ### フロントエンド
 

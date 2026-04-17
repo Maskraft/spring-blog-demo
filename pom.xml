@@ -18,6 +18,8 @@
   <properties>
     <java.version>21</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Spring REST Docs が生成するスニペットの出力先 -->
+    <snippetsDirectory>${project.build.directory}/generated-snippets</snippetsDirectory>
   </properties>
 
   <dependencies>
@@ -53,6 +55,13 @@
       <version>1.3.0</version>
       <scope>test</scope>
     </dependency>
+
+    <!-- Spring REST Docs: MockMvc テストから API ドキュメント用のスニペットを生成する -->
+    <dependency>
+      <groupId>org.springframework.restdocs</groupId>
+      <artifactId>spring-restdocs-mockmvc</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -60,6 +69,58 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- Surefire: Spring REST Docs にスニペット出力先を渡す。
+           *Test の他にドキュメント生成用の *Documentation もテスト対象として検出する。 -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <includes>
+            <include>**/*Test.java</include>
+            <include>**/*Documentation.java</include>
+          </includes>
+          <systemPropertyVariables>
+            <org.springframework.restdocs.outputDir>${snippetsDirectory}</org.springframework.restdocs.outputDir>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+
+      <!-- Asciidoctor: スニペットを読み込んで HTML ドキュメントを生成する -->
+      <plugin>
+        <groupId>org.asciidoctor</groupId>
+        <artifactId>asciidoctor-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.springframework.restdocs</groupId>
+            <artifactId>spring-restdocs-asciidoctor</artifactId>
+            <version>3.0.3</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>generate-docs</id>
+            <goals>
+              <goal>process-asciidoc</goal>
+            </goals>
+            <phase>prepare-package</phase>
+            <configuration>
+              <backend>html5</backend>
+              <doctype>book</doctype>
+              <sourceDirectory>src/main/asciidoc</sourceDirectory>
+              <outputDirectory>${project.build.directory}/generated-docs</outputDirectory>
+              <attributes>
+                <snippets>${snippetsDirectory}</snippets>
+                <source-highlighter>highlight.js</source-highlighter>
+                <toc>left</toc>
+                <sectnums>true</sectnums>
+                <icons>font</icons>
+              </attributes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
       <!-- Spotless: Google Java Format (AOSP 4-space) による自動フォーマットとチェック -->
