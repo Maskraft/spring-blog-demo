@@ -47,7 +47,7 @@ pnpm dev
 | サービス       | URL                              |
 |------------|----------------------------------|
 | フロントエンドページ | http://localhost:5173            |
-| バックエンド API | http://localhost:8080/api/articles |
+| バックエンド API | http://localhost:8080/api/v1/articles |
 | H2 コンソール   | http://localhost:8080/h2-console |
 
 H2 コンソールのログイン情報：
@@ -59,11 +59,11 @@ H2 コンソールのログイン情報：
 
 | メソッド   | パス                | 説明   |
 |--------|-------------------|------|
-| GET    | `/api/articles`      | 記事一覧 |
-| GET    | `/api/articles/{id}` | 記事詳細 |
-| POST   | `/api/articles`      | 記事作成 |
-| PUT    | `/api/articles/{id}` | 記事更新 |
-| DELETE | `/api/articles/{id}` | 記事削除 |
+| GET    | `/api/v1/articles`      | 記事一覧 |
+| GET    | `/api/v1/articles/{id}` | 記事詳細 |
+| POST   | `/api/v1/articles`      | 記事作成 |
+| PUT    | `/api/v1/articles/{id}` | 記事更新 |
+| DELETE | `/api/v1/articles/{id}` | 記事削除 |
 
 **フィールド**：`id`, `title`, `content`, `createdAt`（サーバー側で自動生成）
 
@@ -124,23 +124,23 @@ pnpm preview        # 本番ビルドのローカルプレビュー
 
 ```powershell
 # 作成
-curl.exe -X POST "http://localhost:8080/api/articles" `
+curl.exe -X POST "http://localhost:8080/api/v1/articles" `
   -H "Content-Type: application/json; charset=utf-8" `
   -d "{\"title\":\"最初の記事\",\"content\":\"Hello Blog\"}"
 
 # 一覧
-curl.exe "http://localhost:8080/api/articles"
+curl.exe "http://localhost:8080/api/v1/articles"
 
 # 詳細
-curl.exe "http://localhost:8080/api/articles/1"
+curl.exe "http://localhost:8080/api/v1/articles/1"
 
 # 更新
-curl.exe -X PUT "http://localhost:8080/api/articles/1" `
+curl.exe -X PUT "http://localhost:8080/api/v1/articles/1" `
   -H "Content-Type: application/json; charset=utf-8" `
   -d "{\"title\":\"修正後のタイトル\",\"content\":\"本文を修正しました\"}"
 
 # 削除
-curl.exe -X DELETE "http://localhost:8080/api/articles/1" -i
+curl.exe -X DELETE "http://localhost:8080/api/v1/articles/1" -i
 ```
 
 ## 開発時の注意点

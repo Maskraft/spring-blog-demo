@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URI;
 import java.util.List;
 
-// 記事の REST API。共通プレフィックスは /api/articles
+// 記事の REST API。共通プレフィックスは /api/v1/articles（API バージョニング）
 @RestController
-@RequestMapping("/api/articles")
+@RequestMapping("/api/v1/articles")
 public class ArticleController {
 
     private final ArticleService articleService;
@@ -42,7 +42,7 @@ public class ArticleController {
     public ResponseEntity<ArticleResponse> create(@Valid @RequestBody ArticleRequest request) {
         ArticleResponse created = articleService.create(request);
         return ResponseEntity
-                .created(URI.create("/api/articles/" + created.id()))
+                .created(URI.create("/api/v1/articles/" + created.id()))
                 .body(created);
     }
 

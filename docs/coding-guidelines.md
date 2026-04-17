@@ -24,9 +24,9 @@ src/main/java/com/{会社ドメイン}/{プロジェクト名}/
 
 ## API設計規則
 
-- RESTful原則に基づくURL設計（例: `/api/articles`）
+- RESTful原則に基づくURL設計（例: `/api/v1/articles`）
 - HTTPメソッドの適切な使用（GET/POST/PUT/DELETE）
-- バージョニング（例: `/api/v1/articles`）
+- バージョニング必須（例: `/api/v1/articles`）
 - エラーレスポンスは統一形式で返す
 
 ## 実装ルール

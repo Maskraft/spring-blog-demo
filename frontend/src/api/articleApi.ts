@@ -1,6 +1,6 @@
 import type { ApiError, Article, ArticleRequest } from '../types/article'
 
-const BASE_URL = '/api/articles'
+const BASE_URL = '/api/v1/articles'
 
 // レスポンス統一処理：2xx 以外はバックエンドの message を持つエラーをスローする
 async function handleResponse<T>(res: Response): Promise<T> {
