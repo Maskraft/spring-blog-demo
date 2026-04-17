@@ -1,7 +1,7 @@
 package com.learn.blog.controller;
 
 import com.learn.blog.dto.ArticleRequest;
-import com.learn.blog.entity.Article;
+import com.learn.blog.dto.ArticleResponse;
 import com.learn.blog.service.ArticleService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -29,25 +29,25 @@ public class ArticleController {
     }
 
     @GetMapping
-    public List<Article> list() {
+    public List<ArticleResponse> list() {
         return articleService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Article getOne(@PathVariable Long id) {
+    public ArticleResponse getOne(@PathVariable Long id) {
         return articleService.findById(id);
     }
 
     @PostMapping
-    public ResponseEntity<Article> create(@Valid @RequestBody ArticleRequest request) {
-        Article created = articleService.create(request);
+    public ResponseEntity<ArticleResponse> create(@Valid @RequestBody ArticleRequest request) {
+        ArticleResponse created = articleService.create(request);
         return ResponseEntity
-                .created(URI.create("/api/articles/" + created.getId()))
+                .created(URI.create("/api/articles/" + created.id()))
                 .body(created);
     }
 
     @PutMapping("/{id}")
-    public Article update(@PathVariable Long id, @Valid @RequestBody ArticleRequest request) {
+    public ArticleResponse update(@PathVariable Long id, @Valid @RequestBody ArticleRequest request) {
         return articleService.update(id, request);
     }
 

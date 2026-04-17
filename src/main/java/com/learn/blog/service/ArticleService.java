@@ -1,6 +1,7 @@
 package com.learn.blog.service;
 
 import com.learn.blog.dto.ArticleRequest;
+import com.learn.blog.dto.ArticleResponse;
 import com.learn.blog.entity.Article;
 import com.learn.blog.exception.ArticleNotFoundException;
 import com.learn.blog.repository.ArticleRepository;
@@ -21,26 +22,27 @@ public class ArticleService {
     }
 
     @Transactional(readOnly = true)
-    public List<Article> findAll() {
-        return articleRepository.findAll();
+    public List<ArticleResponse> findAll() {
+        return articleRepository.findAll().stream()
+                .map(ArticleResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public Article findById(Long id) {
-        return articleRepository.findById(id)
-                .orElseThrow(() -> new ArticleNotFoundException(id));
+    public ArticleResponse findById(Long id) {
+        return ArticleResponse.from(getArticle(id));
     }
 
-    public Article create(ArticleRequest request) {
+    public ArticleResponse create(ArticleRequest request) {
         Article article = new Article(request.title(), request.content());
-        return articleRepository.save(article);
+        return ArticleResponse.from(articleRepository.save(article));
     }
 
-    public Article update(Long id, ArticleRequest request) {
-        Article article = findById(id);
+    public ArticleResponse update(Long id, ArticleRequest request) {
+        Article article = getArticle(id);
         article.setTitle(request.title());
         article.setContent(request.content());
-        return articleRepository.save(article);
+        return ArticleResponse.from(articleRepository.save(article));
     }
 
     public void delete(Long id) {
@@ -48,5 +50,11 @@ public class ArticleService {
             throw new ArticleNotFoundException(id);
         }
         articleRepository.deleteById(id);
+    }
+
+    // 内部で使用するエンティティ取得メソッド。存在しない場合は例外を投げる
+    private Article getArticle(Long id) {
+        return articleRepository.findById(id)
+                .orElseThrow(() -> new ArticleNotFoundException(id));
     }
 }
