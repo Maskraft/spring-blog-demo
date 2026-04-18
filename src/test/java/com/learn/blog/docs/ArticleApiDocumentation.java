@@ -32,6 +32,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
@@ -48,6 +49,7 @@ import com.learn.blog.service.ArticleService;
 // 生成先: target/generated-snippets/<identifier>/*.adoc
 @WebMvcTest(ArticleController.class)
 @ExtendWith(RestDocumentationExtension.class)
+@ActiveProfiles("test")
 class ArticleApiDocumentation {
 
     @Autowired private WebApplicationContext webApplicationContext;

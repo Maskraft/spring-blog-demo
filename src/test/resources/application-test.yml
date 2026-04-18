@@ -1,0 +1,15 @@
+# テストプロファイル：H2 インメモリ DB を MySQL 互換モードで利用
+spring:
+  datasource:
+    url: jdbc:h2:mem:blogdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      # テストごとにスキーマを再生成（Flyway は使わない）
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+  flyway:
+    # テストでは JPA がスキーマを生成するため Flyway は無効化
+    enabled: false

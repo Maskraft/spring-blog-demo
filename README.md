@@ -4,7 +4,7 @@
 
 ## 技術スタック
 
-- **バックエンド**：Java 21 · Spring Boot 3.4 · Spring Data JPA · H2 インメモリデータベース
+- **バックエンド**：Java 21 · Spring Boot 3.4 · Spring Data JPA · Flyway · MySQL 8（開発/本番）/ H2（テスト）
 - **フロントエンド**：React 19 · Vite 6 · TypeScript 5.7 · React Router 7
 - **パッケージ管理**：Maven(バックエンド)· pnpm(フロントエンド)
 
@@ -12,23 +12,33 @@
 
 - JDK 21
 - Maven 3.9+（または IntelliJ 同梱版を使用）
+- Docker Desktop（MySQL をコンテナで起動するため）
 - Node.js 20+
 - pnpm 10+（未インストールの場合：`npm i -g pnpm` を実行）
 
 ## クイックスタート
 
-フロントエンドとバックエンドは別々のターミナルで起動する必要があります。**先にバックエンドを起動**してください。そうしないとフロントエンドからの API 呼び出しが 502 になります。
+フロントエンドとバックエンドは別々のターミナルで起動する必要があります。**MySQL → バックエンド → フロントエンド** の順に起動してください。そうしないとフロントエンドからの API 呼び出しが 502 になります。
 
-### 1. バックエンドの起動（PowerShell）
+### 1. MySQL の起動（PowerShell）
+
+```powershell
+cd C:\Users\maskr\IdeaProjects\SpringBlog
+docker compose up -d
+```
+
+初回起動時は MySQL イメージのダウンロードに時間がかかります。`docker compose ps` の `STATUS` が `healthy` になれば準備完了です。MySQL は **3306** ポートを使用します。
+
+### 2. バックエンドの起動（PowerShell）
 
 ```powershell
 cd C:\Users\maskr\IdeaProjects\SpringBlog
 mvn spring-boot:run
 ```
 
-コンソールに `Started BlogApplication in X.XXX seconds` と表示されれば成功です。バックエンドは **8080** ポートを使用します。
+コンソールに `Started BlogApplication in X.XXX seconds` と表示されれば成功です。バックエンドは **8080** ポートを使用し、起動時に Flyway が `db/migration/V*.sql` を自動適用します。
 
-### 2. フロントエンドの起動（別の PowerShell ウィンドウで）
+### 3. フロントエンドの起動（別の PowerShell ウィンドウで）
 
 ```powershell
 cd C:\Users\maskr\IdeaProjects\SpringBlog\frontend
@@ -38,22 +48,25 @@ pnpm dev
 
 成功後、ブラウザで **http://localhost:5173** にアクセスしてください。
 
-### 3. 停止
+### 4. 停止
 
-対応するターミナルで `Ctrl + C` を押してください。
+- フロントエンド／バックエンド：対応するターミナルで `Ctrl + C`。
+- MySQL：`docker compose down`（データは保持）／ `docker compose down -v`（データごと破棄）。
 
 ## アクセス URL
 
-| サービス       | URL                              |
-|------------|----------------------------------|
-| フロントエンドページ | http://localhost:5173            |
-| バックエンド API | http://localhost:8080/api/v1/articles |
-| H2 コンソール   | http://localhost:8080/h2-console |
+| サービス       | URL                                    |
+|------------|----------------------------------------|
+| フロントエンドページ | http://localhost:5173                  |
+| バックエンド API | http://localhost:8080/api/v1/articles  |
+| MySQL      | localhost:3306（コンテナ名 `spring-blog-mysql`）|
 
-H2 コンソールのログイン情報：
-- JDBC URL: `jdbc:h2:mem:blogdb`
-- ユーザー名: `sa`
-- パスワード: 空欄
+MySQL の接続情報（開発用・`docker-compose.yml` 参照）：
+- データベース: `blogdb`
+- ユーザー名: `bloguser`
+- パスワード: `blogpass`
+
+> テスト実行時は H2 インメモリ DB（MySQL 互換モード）が使用されます。
 
 ## REST API 一覧
 
@@ -72,6 +85,7 @@ H2 コンソールのログイン情報：
 ```
 SpringBlog/
 ├── pom.xml                          # バックエンド Maven 設定
+├── docker-compose.yml               # 開発用 MySQL 8 の定義
 ├── src/main/
 │   ├── java/com/learn/blog/
 │   │   ├── BlogApplication.java     # エントリーポイント
@@ -82,7 +96,11 @@ SpringBlog/
 │   │   ├── dto/                     # リクエスト / レスポンス DTO
 │   │   └── exception/               # カスタム例外 + グローバル処理
 │   └── resources/
-│       └── application.yml          # 設定（H2 / JPA / ポート）
+│       ├── application.yml          # 共通設定（プロファイル切替・JPA・ログ）
+│       ├── application-dev.yml      # dev プロファイル：MySQL + Flyway
+│       └── db/migration/            # Flyway マイグレーション（V1__init.sql 等）
+├── src/test/resources/
+│   └── application-test.yml         # test プロファイル：H2 インメモリ
 └── frontend/                        # フロントエンド React + Vite
     ├── package.json
     ├── vite.config.ts               # /api → 8080 のプロキシ設定を含む
@@ -96,16 +114,34 @@ SpringBlog/
 
 ## よく使うコマンド
 
+### MySQL（Docker Compose）
+
+```powershell
+cd C:\Users\maskr\IdeaProjects\SpringBlog
+
+docker compose up -d                        # MySQL 起動（バックグラウンド）
+docker compose ps                           # 状態確認（healthy になるまで待つ）
+docker compose logs -f mysql                # ログ追跡
+docker compose down                         # 停止（データは保持）
+docker compose down -v                      # 停止してデータボリュームも破棄
+```
+
 ### バックエンド
 
 ```powershell
 cd C:\Users\maskr\IdeaProjects\SpringBlog
 
-mvn spring-boot:run                         # 開発モードで起動
+mvn spring-boot:run                         # 開発モードで起動（dev プロファイル）
 mvn clean package                           # テスト + API ドキュメント生成 + jar ビルド
 mvn clean package -DskipTests               # jar のみビルド（テストをスキップ。スニペットは生成されない）
 java -jar target\spring-blog-0.0.1-SNAPSHOT.jar
 ```
+
+#### Flyway 運用ルール
+
+- 新しいスキーマ変更は `src/main/resources/db/migration/V{次の番号}__{説明}.sql` として**新規ファイルで追加**する。
+- **適用済みのマイグレーションファイルは絶対に編集しない**。Flyway が保持するチェックサムと食い違うと起動が失敗する。
+- `dev` プロファイルでは `ddl-auto: validate` を使用するため、エンティティと DB スキーマが食い違えば起動時に検出される。
 
 #### テスト・コード品質
 
@@ -169,6 +205,9 @@ curl.exe -X DELETE "http://localhost:8080/api/v1/articles/1" -i
 ## 開発時の注意点
 
 - **CORS 対応**：フロントエンドは `vite.config.ts` の proxy 経由で `/api` リクエストを `localhost:8080` に転送するため、ブラウザから見ると同一オリジンのリクエストになり、**CORS の設定は一切不要**です。本番デプロイ時には別途対応が必要になります（例：Nginx リバースプロキシ、またはフロントエンドをバックエンドの jar に同梱する）。
-- **データ永続化**：H2 は現在インメモリモードで動作しているため、**バックエンドを再起動するとデータは消えます**。MySQL へ移行する場合は `application.yml` の `datasource` と `pom.xml` の依存関係を変更するだけで済みます。
-- **JPA DDL 戦略**：`ddl-auto=create-drop` を使用しており、起動ごとに自動でテーブルを作り直します。MySQL に切り替える際は `update` に変更するか、Flyway / Liquibase の導入を推奨します。
-- **ポート競合**：8080 または 5173 が使用中の場合、それぞれ `application.yml` の `server.port` と `vite.config.ts` の `server.port` を変更してください（フロントエンドのポートを変更してもプロキシには影響しません）。
+- **データ永続化**：MySQL のデータは Docker の名前付きボリューム `mysql-data` に永続化されるため、`docker compose down` ではデータは消えません。**完全に初期化したい場合は `docker compose down -v`** を使用してください。
+- **プロファイル構成**：アプリは `dev`（MySQL + Flyway）と `test`（H2 インメモリ）の 2 プロファイルを持ちます。`mvn spring-boot:run` はデフォルトで `dev`、`mvn test` は自動で `test` が有効になります。
+- **ポート競合**：
+  - **3306（MySQL）**：ローカルに既存の MySQL が動作している場合は衝突します。`docker-compose.yml` の `ports` を `"3307:3306"` 等に変更し、併せて `application-dev.yml` の URL ポートも揃えてください。
+  - **8080（バックエンド）**：`application.yml` の `server.port` を変更。
+  - **5173（フロントエンド）**：`vite.config.ts` の `server.port` を変更（プロキシには影響しません）。
