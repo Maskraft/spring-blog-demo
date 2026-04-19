@@ -116,17 +116,6 @@ class AuthControllerTest {
         verify(authService, never()).register(any());
     }
 
-    @Test
-    @DisplayName("POST /api/v1/auth/register: CSRF トークン無しで 403")
-    void register_returnsForbiddenWithoutCsrf() throws Exception {
-        mockMvc.perform(
-                        post("/api/v1/auth/register")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"username\":\"alice\",\"password\":\"password123\"}"))
-                .andExpect(status().isForbidden());
-        verify(authService, never()).register(any());
-    }
-
     // ---------- /login ----------
 
     @Test

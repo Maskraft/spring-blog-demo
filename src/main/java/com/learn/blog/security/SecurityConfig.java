@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 // Spring Security 設定。Session + Cookie 方式・BCrypt・CSRF Cookie トークンを有効にする。
 // @PreAuthorize による認可を有効化するため @EnableMethodSecurity を付与する。
@@ -38,10 +39,22 @@ public class SecurityConfig {
         http
                 // CSRF：Cookie ベースで XSRF-TOKEN を発行。SPA は JS で読んで X-XSRF-TOKEN ヘッダに載せる。
                 // HttpOnly=false により JS から Cookie を読める設定。
+                // login / register は未認証状態のアクセスで CSRF 対策の対象外のため除外する
+                // (初回リクエスト時はトークン Cookie がまだ無く、ヘッダを送れないため)。
+                // CsrfTokenRequestAttributeHandler のリクエスト属性名を null にすることで
+                // Spring Security 6 の BREACH 対策（トークンのマスキング）を無効化し、
+                // Cookie の生値をそのまま X-XSRF-TOKEN ヘッダで送る SPA 標準パターンにする
                 .csrf(
-                        csrf ->
-                                csrf.csrfTokenRepository(
-                                        CookieCsrfTokenRepository.withHttpOnlyFalse()))
+                        csrf -> {
+                            CsrfTokenRequestAttributeHandler handler =
+                                    new CsrfTokenRequestAttributeHandler();
+                            handler.setCsrfRequestAttributeName(null);
+                            csrf.csrfTokenRepository(
+                                            CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                    .csrfTokenRequestHandler(handler)
+                                    .ignoringRequestMatchers(
+                                            "/api/v1/auth/login", "/api/v1/auth/register");
+                        })
 
                 // Session 方式：必要時のみ Session を作成
                 .sessionManagement(
