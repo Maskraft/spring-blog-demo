@@ -1,5 +1,6 @@
 package com.learn.blog.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,11 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    // 本番 (HTTPS) では true にして Cookie の Secure 属性を付与する。
+    // dev はデフォルト false（http://localhost でも Cookie を送れるようにするため）
+    @Value("${app.security.cookie-secure:false}")
+    private boolean cookieSecure;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -49,7 +55,11 @@ public class SecurityConfig {
                             CsrfTokenRequestAttributeHandler handler =
                                     new CsrfTokenRequestAttributeHandler();
                             handler.setCsrfRequestAttributeName(null);
-                            csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                            CookieCsrfTokenRepository csrfRepo =
+                                    CookieCsrfTokenRepository.withHttpOnlyFalse();
+                            // 本番では Secure 属性を付けて HTTPS 経由でのみ Cookie を送信させる
+                            csrfRepo.setCookieCustomizer(cookie -> cookie.secure(cookieSecure));
+                            csrf.csrfTokenRepository(csrfRepo)
                                     .csrfTokenRequestHandler(handler)
                                     .ignoringRequestMatchers(
                                             "/api/v1/auth/login", "/api/v1/auth/register");

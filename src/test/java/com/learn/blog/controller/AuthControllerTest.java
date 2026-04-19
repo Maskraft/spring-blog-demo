@@ -11,8 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.List;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +19,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -46,9 +42,9 @@ class AuthControllerTest {
 
     @MockitoBean private AuthService authService;
 
+    // SecurityConfig が AuthenticationManager / UserDetailsService Bean を要求するためモック化
     @MockitoBean private AuthenticationManager authenticationManager;
 
-    // SecurityConfig が UserDetailsService Bean を要求するためモック化
     @MockitoBean private CustomUserDetailsService userDetailsService;
 
     // ---------- /register ----------
@@ -121,13 +117,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/v1/auth/login: 正しい資格で 200 OK と UserResponse")
     void login_returnsOk() throws Exception {
-        when(authenticationManager.authenticate(any()))
-                .thenReturn(
-                        new UsernamePasswordAuthenticationToken(
-                                "alice",
-                                "password123",
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
-        when(authService.findByUsername("alice"))
+        when(authService.login(any(), any(), any()))
                 .thenReturn(new UserResponse(1L, "alice", Role.USER));
 
         mockMvc.perform(
@@ -143,8 +133,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/v1/auth/login: 認証失敗で 401 と統一エラーメッセージ")
     void login_returnsUnauthorizedOnBadCredentials() throws Exception {
-        when(authenticationManager.authenticate(any()))
-                .thenThrow(new BadCredentialsException("bad"));
+        when(authService.login(any(), any(), any())).thenThrow(new BadCredentialsException("bad"));
 
         mockMvc.perform(
                         post("/api/v1/auth/login")
@@ -169,7 +158,7 @@ class AuthControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"username\":\"\",\"password\":\"password123\"}"))
                 .andExpect(status().isBadRequest());
-        verify(authenticationManager, never()).authenticate(any());
+        verify(authService, never()).login(any(), any(), any());
     }
 
     // ---------- /me ----------
