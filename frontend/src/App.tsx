@@ -6,6 +6,7 @@ import ArticleListPage from './pages/ArticleListPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import { useAuth } from './auth/AuthContext'
+import ProtectedRoute from './auth/ProtectedRoute'
 
 // ヘッダー右側：ログイン状態に応じてユーザー名・ログアウト or ログイン・登録リンクを切り替える
 function AuthArea() {
@@ -53,9 +54,23 @@ function App() {
       <main className="app-main">
         <Routes>
           <Route path="/" element={<ArticleListPage />} />
-          <Route path="/articles/new" element={<ArticleCreatePage />} />
+          <Route
+            path="/articles/new"
+            element={
+              <ProtectedRoute>
+                <ArticleCreatePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/articles/:id" element={<ArticleDetailPage />} />
-          <Route path="/articles/:id/edit" element={<ArticleEditPage />} />
+          <Route
+            path="/articles/:id/edit"
+            element={
+              <ProtectedRoute>
+                <ArticleEditPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="*" element={<p>404 Not Found</p>} />

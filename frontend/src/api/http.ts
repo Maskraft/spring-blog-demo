@@ -41,11 +41,18 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
     headers['Content-Type'] = 'application/json'
   }
 
-  // GET/HEAD 以外は CSRF トークンが必要
+  // GET/HEAD 以外は CSRF トークンが必須。Cookie にトークンが無い状態でサーバに投げると
+  // 403 が返るだけでなく「なぜ失敗したか」が分かりにくいため、ここで明示的にエラーをスローする。
+  // login / register は SecurityConfig 側で CSRF 対象外のため、トークン無しでも送信を許可する
   if (method !== 'GET' && method !== 'HEAD') {
     const token = readCsrfToken()
+    const csrfExempt = url === '/api/v1/auth/login' || url === '/api/v1/auth/register'
     if (token) {
       headers['X-XSRF-TOKEN'] = token
+    } else if (!csrfExempt) {
+      throw new Error(
+        'CSRF トークンが見つかりません。ログインし直すか、ページを再読み込みしてください。',
+      )
     }
   }
 

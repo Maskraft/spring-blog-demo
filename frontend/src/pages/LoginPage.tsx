@@ -8,7 +8,13 @@ function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/'
+  // オープンリダイレクト対策：from は自サイト内の相対パスのみ許可する。
+  // 「/」始まり、かつ「//」「/\」で始まらない（プロトコル相対 URL / バックスラッシュ経由の外部遷移を拒否）
+  const rawFrom = (location.state as { from?: string } | null)?.from
+  const from =
+    rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//') && !rawFrom.startsWith('/\\')
+      ? rawFrom
+      : '/'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
