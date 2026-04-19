@@ -49,7 +49,7 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- MySQL: dev/prod プロファイル用の JDBC ドライバ -->
+    <!-- MySQL: dev プロファイル用の JDBC ドライバ -->
     <dependency>
       <groupId>com.mysql</groupId>
       <artifactId>mysql-connector-j</artifactId>

@@ -4,7 +4,7 @@
 
 ## 技術スタック
 
-- **バックエンド**：Java 21 · Spring Boot 3.4 · Spring Data JPA · Flyway · MySQL 8（開発/本番）/ H2（テスト）
+- **バックエンド**：Java 21 · Spring Boot 3.5 · Spring Data JPA · Flyway · MySQL 8（開発）/ H2（テスト）
 - **フロントエンド**：React 19 · Vite 6 · TypeScript 5.7 · React Router 7
 - **パッケージ管理**：Maven(バックエンド)· pnpm(フロントエンド)
 
@@ -76,8 +76,10 @@ MySQL の接続情報（開発用・`docker-compose.yml` 参照）：
 |--------|---------------------------|-------|---------------------------------------|
 | POST   | `/api/v1/auth/register`   | 公開    | ユーザー登録（常に `USER` ロールで作成）              |
 | POST   | `/api/v1/auth/login`      | 公開    | ログイン。成功時は `JSESSIONID` Cookie を発行     |
-| POST   | `/api/v1/auth/logout`     | 認証済み  | ログアウト。セッションと `JSESSIONID` を破棄         |
+| POST   | `/api/v1/auth/logout`     | 認証済み  | ログアウト。セッションと `JSESSIONID` を破棄（※）     |
 | GET    | `/api/v1/auth/me`         | 認証済み  | 現在ログイン中のユーザー情報                        |
+
+> ※ `/logout` は `AuthController` ではなく Spring Security のフィルタ（`SecurityConfig`）が直接処理します。
 
 ### 記事 API
 
@@ -138,11 +140,17 @@ SpringBlog/
     ├── package.json
     ├── vite.config.ts               # /api → 8080 のプロキシ設定を含む
     └── src/
-        ├── main.tsx / App.tsx       # エントリー + ルーティング
-        ├── api/articleApi.ts           # fetch ラッパー
-        ├── types/article.ts            # 型定義
+        ├── main.tsx / App.tsx          # エントリー + ルーティング（AuthProvider でラップ）
+        ├── api/
+        │   ├── http.ts                 # fetch 共通ラッパー（credentials: include・CSRF ヘッダ付与）
+        │   ├── articleApi.ts           # 記事 API クライアント
+        │   └── authApi.ts              # 認証 API クライアント（login/logout/register/me）
+        ├── auth/AuthContext.tsx        # 認証状態の Context（user/login/logout/loading）
+        ├── types/
+        │   ├── article.ts              # 記事型定義
+        │   └── auth.ts                 # ユーザー / リクエスト型定義
         ├── components/ArticleForm.tsx  # 作成/編集共用フォーム
-        └── pages/                      # 一覧/詳細/作成/編集
+        └── pages/                      # 一覧/詳細/作成/編集/ログイン/新規登録
 ```
 
 ## よく使うコマンド
@@ -190,7 +198,9 @@ mvn spotless:check                          # 書式違反の検出のみ
 | テストクラス | 件数 | 目的 |
 |------|------|------|
 | `ArticleServiceTest` | 9 | Mockito による Service 層の単体テスト |
+| `AuthServiceTest` | 4 | Mockito による認証 Service 層の単体テスト（重複拒否・USER ロール固定・ハッシュ化） |
 | `ArticleControllerTest` | 13 | `@WebMvcTest` + MockMvc による HTTP 層テスト（認可: 401/403 含む） |
+| `AuthControllerTest` | 11 | `@WebMvcTest` + MockMvc による認証 API テスト（/register, /login, /me, /logout + CSRF 検証） |
 | `ArchitectureTest` | 6 | ArchUnit によるアーキテクチャ制約（レイヤー依存・パッケージ配置・`@Transactional` 配置） |
 | `ArticleApiDocumentation` | 7 | Spring REST Docs による API ドキュメント用スニペット生成 |
 
