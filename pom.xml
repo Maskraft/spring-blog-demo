@@ -221,7 +221,8 @@
         </configuration>
         <executions>
           <execution>
-            <!-- verify フェーズで check を実行し、違反があればビルドを失敗させる -->
+            <!-- verify フェーズで check を実行し、違反があればビルドを失敗させる。
+                 整形は開発者がローカルで `./mvnw spotless:apply` を明示的に実行する -->
             <id>spotless-check</id>
             <goals>
               <goal>check</goal>
