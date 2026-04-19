@@ -13,6 +13,8 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.requestF
 import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -29,9 +31,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -42,14 +46,18 @@ import com.learn.blog.controller.ArticleController;
 import com.learn.blog.dto.ArticleRequest;
 import com.learn.blog.dto.ArticleResponse;
 import com.learn.blog.exception.ArticleNotFoundException;
+import com.learn.blog.security.CustomUserDetailsService;
+import com.learn.blog.security.SecurityConfig;
 import com.learn.blog.service.ArticleService;
 
 // Spring REST Docs 用のドキュメント生成テスト。
 // 各エンドポイントに対して document(...) を呼び、リクエスト/レスポンスのスニペットを生成する。
 // 生成先: target/generated-snippets/<identifier>/*.adoc
 @WebMvcTest(ArticleController.class)
+@Import(SecurityConfig.class)
 @ExtendWith(RestDocumentationExtension.class)
 @ActiveProfiles("test")
+@WithMockUser(roles = "ADMIN")
 class ArticleApiDocumentation {
 
     @Autowired private WebApplicationContext webApplicationContext;
@@ -57,6 +65,8 @@ class ArticleApiDocumentation {
     @Autowired private ObjectMapper objectMapper;
 
     @MockitoBean private ArticleService articleService;
+
+    @MockitoBean private CustomUserDetailsService userDetailsService;
 
     private MockMvc mockMvc;
 
@@ -66,6 +76,7 @@ class ArticleApiDocumentation {
         this.mockMvc =
                 webAppContextSetup(webApplicationContext)
                         .apply(documentationConfiguration(restDocumentation))
+                        .apply(springSecurity())
                         .build();
     }
 
@@ -117,6 +128,7 @@ class ArticleApiDocumentation {
 
         mockMvc.perform(
                         post("/api/v1/articles")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -144,6 +156,7 @@ class ArticleApiDocumentation {
 
         mockMvc.perform(
                         put("/api/v1/articles/{id}", 1L)
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -166,7 +179,7 @@ class ArticleApiDocumentation {
     void deleteArticle() throws Exception {
         doNothing().when(articleService).delete(1L);
 
-        mockMvc.perform(delete("/api/v1/articles/{id}", 1L))
+        mockMvc.perform(delete("/api/v1/articles/{id}", 1L).with(csrf()))
                 .andExpect(status().isNoContent())
                 .andDo(
                         document(
@@ -199,6 +212,7 @@ class ArticleApiDocumentation {
 
         mockMvc.perform(
                         post("/api/v1/articles")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(invalidJson))
                 .andExpect(status().isBadRequest())

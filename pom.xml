@@ -36,6 +36,12 @@
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
 
+    <!-- Spring Security: 認証 (Session + Cookie) と認可 (@PreAuthorize) を提供 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
     <!-- H2: テスト時のインメモリ DB として使用（test プロファイル専用） -->
     <dependency>
       <groupId>com.h2database</groupId>
@@ -63,6 +69,13 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Spring Security Test: @WithMockUser など認証済み状態のモック機能を提供 -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
     </dependency>
 

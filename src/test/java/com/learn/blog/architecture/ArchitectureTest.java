@@ -17,6 +17,7 @@ import com.tngtech.archunit.library.Architectures;
 class ArchitectureTest {
 
     // レイヤー依存方向：controller → service → repository のみを許可する。
+    // security は認証・認可の横断関心事として、controller / service / repository から参照される。
     // entity / dto / exception は横断的に使用されるため依存元を限定しない。
     @ArchTest
     static final ArchRule layeredArchitecture =
@@ -28,12 +29,16 @@ class ArchitectureTest {
                     .definedBy("com.learn.blog.service..")
                     .layer("Repository")
                     .definedBy("com.learn.blog.repository..")
+                    .layer("Security")
+                    .definedBy("com.learn.blog.security..")
                     .whereLayer("Controller")
                     .mayNotBeAccessedByAnyLayer()
                     .whereLayer("Service")
-                    .mayOnlyBeAccessedByLayers("Controller")
+                    .mayOnlyBeAccessedByLayers("Controller", "Security")
                     .whereLayer("Repository")
-                    .mayOnlyBeAccessedByLayers("Service");
+                    .mayOnlyBeAccessedByLayers("Service", "Security")
+                    .whereLayer("Security")
+                    .mayOnlyBeAccessedByLayers("Controller");
 
     // @RestController / @Controller 付きクラスは controller パッケージに配置する
     @ArchTest
