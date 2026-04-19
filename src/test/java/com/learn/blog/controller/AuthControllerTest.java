@@ -56,15 +56,13 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/v1/auth/register: 正常な登録で 201 Created と Location ヘッダ")
     void register_returnsCreated() throws Exception {
-        when(authService.register(any()))
-                .thenReturn(new UserResponse(1L, "alice", Role.USER));
+        when(authService.register(any())).thenReturn(new UserResponse(1L, "alice", Role.USER));
 
         mockMvc.perform(
                         post("/api/v1/auth/register")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        "{\"username\":\"alice\",\"password\":\"password123\"}"))
+                                .content("{\"username\":\"alice\",\"password\":\"password123\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/auth/me"))
                 .andExpect(jsonPath("$.id").value(1))
@@ -75,18 +73,17 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/v1/auth/register: username 重複で 409 Conflict")
     void register_returnsConflictWhenUsernameExists() throws Exception {
-        when(authService.register(any()))
-                .thenThrow(new UsernameAlreadyExistsException("alice"));
+        when(authService.register(any())).thenThrow(new UsernameAlreadyExistsException("alice"));
 
         mockMvc.perform(
                         post("/api/v1/auth/register")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        "{\"username\":\"alice\",\"password\":\"password123\"}"))
+                                .content("{\"username\":\"alice\",\"password\":\"password123\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("alice")));
+                .andExpect(
+                        jsonPath("$.message").value(org.hamcrest.Matchers.containsString("alice")));
     }
 
     @Test
@@ -125,8 +122,7 @@ class AuthControllerTest {
         mockMvc.perform(
                         post("/api/v1/auth/register")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        "{\"username\":\"alice\",\"password\":\"password123\"}"))
+                                .content("{\"username\":\"alice\",\"password\":\"password123\"}"))
                 .andExpect(status().isForbidden());
         verify(authService, never()).register(any());
     }
@@ -149,8 +145,7 @@ class AuthControllerTest {
                         post("/api/v1/auth/login")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        "{\"username\":\"alice\",\"password\":\"password123\"}"))
+                                .content("{\"username\":\"alice\",\"password\":\"password123\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.username").value("alice"));
@@ -217,7 +212,6 @@ class AuthControllerTest {
     @DisplayName("POST /api/v1/auth/logout: 認証済みなら 204 No Content")
     @WithMockUser(username = "alice", roles = "USER")
     void logout_returnsNoContent() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/logout").with(csrf()))
-                .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/v1/auth/logout").with(csrf())).andExpect(status().isNoContent());
     }
 }
