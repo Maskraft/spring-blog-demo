@@ -57,7 +57,7 @@ import com.learn.blog.service.ArticleService;
 @Import(SecurityConfig.class)
 @ExtendWith(RestDocumentationExtension.class)
 @ActiveProfiles("test")
-@WithMockUser(roles = "ADMIN")
+@WithMockUser(username = "admin", roles = "ADMIN")
 class ArticleApiDocumentation {
 
     @Autowired private WebApplicationContext webApplicationContext;
@@ -81,7 +81,8 @@ class ArticleApiDocumentation {
     }
 
     private ArticleResponse sampleResponse(Long id) {
-        return new ArticleResponse(id, "サンプルタイトル", "サンプル本文", LocalDateTime.of(2026, 4, 17, 10, 0));
+        return new ArticleResponse(
+                id, "サンプルタイトル", "サンプル本文", LocalDateTime.of(2026, 4, 17, 10, 0), "admin");
     }
 
     @Test
@@ -98,8 +99,9 @@ class ArticleApiDocumentation {
                                         fieldWithPath("[].id").description("記事 ID"),
                                         fieldWithPath("[].title").description("記事タイトル"),
                                         fieldWithPath("[].content").description("記事本文"),
-                                        fieldWithPath("[].createdAt")
-                                                .description("作成日時（ISO-8601）"))));
+                                        fieldWithPath("[].createdAt").description("作成日時（ISO-8601）"),
+                                        fieldWithPath("[].authorUsername")
+                                                .description("投稿者のユーザー名"))));
     }
 
     @Test
@@ -117,14 +119,16 @@ class ArticleApiDocumentation {
                                         fieldWithPath("id").description("記事 ID"),
                                         fieldWithPath("title").description("記事タイトル"),
                                         fieldWithPath("content").description("記事本文"),
-                                        fieldWithPath("createdAt").description("作成日時（ISO-8601）"))));
+                                        fieldWithPath("createdAt").description("作成日時（ISO-8601）"),
+                                        fieldWithPath("authorUsername").description("投稿者のユーザー名"))));
     }
 
     @Test
     @DisplayName("POST /api/v1/articles: 作成のドキュメント")
     void createArticle() throws Exception {
         ArticleRequest request = new ArticleRequest("新規タイトル", "新規本文");
-        when(articleService.create(any(ArticleRequest.class))).thenReturn(sampleResponse(10L));
+        when(articleService.create(any(ArticleRequest.class), eq("admin")))
+                .thenReturn(sampleResponse(10L));
 
         mockMvc.perform(
                         post("/api/v1/articles")
@@ -144,14 +148,15 @@ class ArticleApiDocumentation {
                                         fieldWithPath("id").description("記事 ID"),
                                         fieldWithPath("title").description("記事タイトル"),
                                         fieldWithPath("content").description("記事本文"),
-                                        fieldWithPath("createdAt").description("作成日時（ISO-8601）"))));
+                                        fieldWithPath("createdAt").description("作成日時（ISO-8601）"),
+                                        fieldWithPath("authorUsername").description("投稿者のユーザー名"))));
     }
 
     @Test
     @DisplayName("PUT /api/v1/articles/{id}: 更新のドキュメント")
     void updateArticle() throws Exception {
         ArticleRequest request = new ArticleRequest("更新後タイトル", "更新後本文");
-        when(articleService.update(eq(1L), any(ArticleRequest.class)))
+        when(articleService.update(eq(1L), any(ArticleRequest.class), eq("admin")))
                 .thenReturn(sampleResponse(1L));
 
         mockMvc.perform(
@@ -171,13 +176,14 @@ class ArticleApiDocumentation {
                                         fieldWithPath("id").description("記事 ID"),
                                         fieldWithPath("title").description("記事タイトル"),
                                         fieldWithPath("content").description("記事本文"),
-                                        fieldWithPath("createdAt").description("作成日時（ISO-8601）"))));
+                                        fieldWithPath("createdAt").description("作成日時（ISO-8601）"),
+                                        fieldWithPath("authorUsername").description("投稿者のユーザー名"))));
     }
 
     @Test
     @DisplayName("DELETE /api/v1/articles/{id}: 削除のドキュメント")
     void deleteArticle() throws Exception {
-        doNothing().when(articleService).delete(1L);
+        doNothing().when(articleService).delete(1L, "admin");
 
         mockMvc.perform(delete("/api/v1/articles/{id}", 1L).with(csrf()))
                 .andExpect(status().isNoContent())

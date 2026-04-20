@@ -18,24 +18,35 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import com.learn.blog.dto.ArticleRequest;
 import com.learn.blog.dto.ArticleResponse;
 import com.learn.blog.entity.Article;
+import com.learn.blog.entity.Role;
+import com.learn.blog.entity.User;
 import com.learn.blog.exception.ArticleNotFoundException;
 import com.learn.blog.repository.ArticleRepository;
+import com.learn.blog.repository.UserRepository;
 
 // ArticleService のビジネスロジックを Mockito で検証する単体テスト
 @ExtendWith(MockitoExtension.class)
 class ArticleServiceTest {
 
     @Mock private ArticleRepository articleRepository;
+    @Mock private UserRepository userRepository;
 
     @InjectMocks private ArticleService articleService;
 
-    // テスト用の Article を作成（id と createdAt を明示的に設定）
-    private Article newArticle(Long id, String title, String content) {
-        Article article = new Article(title, content);
+    private User newUser(Long id, String username, Role role) {
+        User user = new User(username, "hashed", role);
+        user.setId(id);
+        return user;
+    }
+
+    // テスト用の Article を作成（id・createdAt・author を明示的に設定）
+    private Article newArticle(Long id, String title, String content, User author) {
+        Article article = new Article(title, content, author);
         article.setId(id);
         article.setCreatedAt(LocalDateTime.of(2026, 4, 17, 10, 0));
         return article;
@@ -44,8 +55,9 @@ class ArticleServiceTest {
     @Test
     @DisplayName("findAll: 全件を ArticleResponse に変換して返す")
     void findAll_returnsAllArticlesAsResponse() {
-        Article a1 = newArticle(1L, "タイトル1", "本文1");
-        Article a2 = newArticle(2L, "タイトル2", "本文2");
+        User author = newUser(1L, "user1", Role.USER);
+        Article a1 = newArticle(1L, "タイトル1", "本文1", author);
+        Article a2 = newArticle(2L, "タイトル2", "本文2", author);
         when(articleRepository.findAll()).thenReturn(List.of(a1, a2));
 
         List<ArticleResponse> result = articleService.findAll();
@@ -68,7 +80,8 @@ class ArticleServiceTest {
     @Test
     @DisplayName("findById: 存在する場合は ArticleResponse を返す")
     void findById_returnsResponseWhenExists() {
-        Article article = newArticle(1L, "タイトル", "本文");
+        User author = newUser(1L, "user1", Role.USER);
+        Article article = newArticle(1L, "タイトル", "本文", author);
         when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
 
         ArticleResponse result = articleService.findById(1L);
@@ -77,6 +90,7 @@ class ArticleServiceTest {
         assertThat(result.title()).isEqualTo("タイトル");
         assertThat(result.content()).isEqualTo("本文");
         assertThat(result.createdAt()).isEqualTo(LocalDateTime.of(2026, 4, 17, 10, 0));
+        assertThat(result.authorUsername()).isEqualTo("user1");
     }
 
     @Test
@@ -92,33 +106,66 @@ class ArticleServiceTest {
     @Test
     @DisplayName("create: 保存したエンティティの ArticleResponse を返す")
     void create_savesAndReturnsResponse() {
+        User author = newUser(1L, "user1", Role.USER);
         ArticleRequest request = new ArticleRequest("新しいタイトル", "新しい本文");
-        Article saved = newArticle(10L, "新しいタイトル", "新しい本文");
+        Article saved = newArticle(10L, "新しいタイトル", "新しい本文", author);
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(author));
         when(articleRepository.save(any(Article.class))).thenReturn(saved);
 
-        ArticleResponse result = articleService.create(request);
+        ArticleResponse result = articleService.create(request, "user1");
 
         assertThat(result.id()).isEqualTo(10L);
         assertThat(result.title()).isEqualTo("新しいタイトル");
-        assertThat(result.content()).isEqualTo("新しい本文");
+        assertThat(result.authorUsername()).isEqualTo("user1");
         verify(articleRepository, times(1)).save(any(Article.class));
     }
 
     @Test
-    @DisplayName("update: 既存エンティティを上書きして ArticleResponse を返す")
+    @DisplayName("update: 所有者が自分の記事を更新できる")
     void update_modifiesExistingAndReturnsResponse() {
-        Article existing = newArticle(1L, "旧タイトル", "旧本文");
+        User author = newUser(1L, "user1", Role.USER);
+        Article existing = newArticle(1L, "旧タイトル", "旧本文", author);
         ArticleRequest request = new ArticleRequest("新タイトル", "新本文");
         when(articleRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(author));
         when(articleRepository.save(existing)).thenReturn(existing);
 
-        ArticleResponse result = articleService.update(1L, request);
+        ArticleResponse result = articleService.update(1L, request, "user1");
 
         assertThat(result.title()).isEqualTo("新タイトル");
         assertThat(result.content()).isEqualTo("新本文");
-        // setter によってエンティティが書き換わっていることを確認
         assertThat(existing.getTitle()).isEqualTo("新タイトル");
-        assertThat(existing.getContent()).isEqualTo("新本文");
+    }
+
+    @Test
+    @DisplayName("update: ADMIN は他ユーザーの記事も更新できる")
+    void update_allowsAdminToUpdateOthersArticle() {
+        User author = newUser(1L, "user1", Role.USER);
+        User admin = newUser(2L, "admin", Role.ADMIN);
+        Article existing = newArticle(1L, "旧タイトル", "旧本文", author);
+        ArticleRequest request = new ArticleRequest("新タイトル", "新本文");
+        when(articleRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        when(articleRepository.save(existing)).thenReturn(existing);
+
+        ArticleResponse result = articleService.update(1L, request, "admin");
+
+        assertThat(result.title()).isEqualTo("新タイトル");
+    }
+
+    @Test
+    @DisplayName("update: 他ユーザーの記事を更新しようとすると AccessDeniedException")
+    void update_throwsWhenNotOwner() {
+        User author = newUser(1L, "user1", Role.USER);
+        User other = newUser(2L, "other", Role.USER);
+        Article existing = newArticle(1L, "タイトル", "本文", author);
+        ArticleRequest request = new ArticleRequest("新タイトル", "新本文");
+        when(articleRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(userRepository.findByUsername("other")).thenReturn(Optional.of(other));
+
+        assertThatThrownBy(() -> articleService.update(1L, request, "other"))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(articleRepository, never()).save(any());
     }
 
     @Test
@@ -127,27 +174,58 @@ class ArticleServiceTest {
         ArticleRequest request = new ArticleRequest("タイトル", "本文");
         when(articleRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> articleService.update(99L, request))
+        assertThatThrownBy(() -> articleService.update(99L, request, "user1"))
                 .isInstanceOf(ArticleNotFoundException.class);
         verify(articleRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("delete: 存在する場合は deleteById が呼ばれる")
-    void delete_removesWhenExists() {
-        when(articleRepository.existsById(1L)).thenReturn(true);
+    @DisplayName("delete: 所有者が自分の記事を削除できる")
+    void delete_removesWhenOwner() {
+        User author = newUser(1L, "user1", Role.USER);
+        Article article = newArticle(1L, "タイトル", "本文", author);
+        when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(author));
 
-        articleService.delete(1L);
+        articleService.delete(1L, "user1");
 
         verify(articleRepository, times(1)).deleteById(1L);
     }
 
     @Test
+    @DisplayName("delete: ADMIN は他ユーザーの記事も削除できる")
+    void delete_allowsAdminToDeleteOthersArticle() {
+        User author = newUser(1L, "user1", Role.USER);
+        User admin = newUser(2L, "admin", Role.ADMIN);
+        Article article = newArticle(1L, "タイトル", "本文", author);
+        when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+
+        articleService.delete(1L, "admin");
+
+        verify(articleRepository, times(1)).deleteById(1L);
+    }
+
+    @Test
+    @DisplayName("delete: 他ユーザーの記事を削除しようとすると AccessDeniedException")
+    void delete_throwsWhenNotOwner() {
+        User author = newUser(1L, "user1", Role.USER);
+        User other = newUser(2L, "other", Role.USER);
+        Article article = newArticle(1L, "タイトル", "本文", author);
+        when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
+        when(userRepository.findByUsername("other")).thenReturn(Optional.of(other));
+
+        assertThatThrownBy(() -> articleService.delete(1L, "other"))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(articleRepository, never()).deleteById(any());
+    }
+
+    @Test
     @DisplayName("delete: 存在しない場合は ArticleNotFoundException を投げ、deleteById は呼ばれない")
     void delete_throwsWhenNotFound() {
-        when(articleRepository.existsById(99L)).thenReturn(false);
+        when(articleRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> articleService.delete(99L))
+        assertThatThrownBy(() -> articleService.delete(99L, "user1"))
                 .isInstanceOf(ArticleNotFoundException.class)
                 .hasMessageContaining("id=99");
         verify(articleRepository, never()).deleteById(any());

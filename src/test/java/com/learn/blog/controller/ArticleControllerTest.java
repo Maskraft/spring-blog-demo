@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -40,7 +41,7 @@ import com.learn.blog.security.SecurityConfig;
 import com.learn.blog.service.ArticleService;
 
 // ArticleController の HTTP 層テスト。Service をモック化し、ルーティング・バリデーション・例外処理を検証する。
-// SecurityConfig を @Import することで @PreAuthorize と認可ルールを実環境と同じ設定で動かす
+// SecurityConfig を @Import することで認可ルールを実環境と同じ設定で動かす
 @WebMvcTest(ArticleController.class)
 @Import(SecurityConfig.class)
 @ActiveProfiles("test")
@@ -57,7 +58,7 @@ class ArticleControllerTest {
 
     private ArticleResponse sampleResponse(Long id) {
         return new ArticleResponse(
-                id, "タイトル" + id, "本文" + id, LocalDateTime.of(2026, 4, 17, 10, 0));
+                id, "タイトル" + id, "本文" + id, LocalDateTime.of(2026, 4, 17, 10, 0), "testuser");
     }
 
     @Test
@@ -82,7 +83,8 @@ class ArticleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.title").value("タイトル1"))
-                .andExpect(jsonPath("$.content").value("本文1"));
+                .andExpect(jsonPath("$.content").value("本文1"))
+                .andExpect(jsonPath("$.authorUsername").value("testuser"));
     }
 
     @Test
@@ -99,11 +101,30 @@ class ArticleControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/articles: 正常な入力で 201 Created と Location ヘッダを返す")
-    @WithMockUser(roles = "ADMIN")
-    void create_returnsCreated() throws Exception {
+    @DisplayName("POST /api/v1/articles: ADMIN ロールで 201 Created と Location ヘッダを返す")
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void create_returnsCreatedAsAdmin() throws Exception {
         ArticleRequest request = new ArticleRequest("新タイトル", "新本文");
-        when(articleService.create(any(ArticleRequest.class))).thenReturn(sampleResponse(10L));
+        when(articleService.create(any(ArticleRequest.class), eq("admin")))
+                .thenReturn(sampleResponse(10L));
+
+        mockMvc.perform(
+                        post("/api/v1/articles")
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", "/api/v1/articles/10"))
+                .andExpect(jsonPath("$.id").value(10));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/articles: USER ロールでも 201 Created を返す")
+    @WithMockUser(username = "user1", roles = "USER")
+    void create_returnsCreatedAsUser() throws Exception {
+        ArticleRequest request = new ArticleRequest("新タイトル", "新本文");
+        when(articleService.create(any(ArticleRequest.class), eq("user1")))
+                .thenReturn(sampleResponse(10L));
 
         mockMvc.perform(
                         post("/api/v1/articles")
@@ -126,27 +147,12 @@ class ArticleControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(json))
                 .andExpect(status().isUnauthorized());
-        verify(articleService, never()).create(any());
-    }
-
-    @Test
-    @DisplayName("POST /api/v1/articles: USER ロールでは 403")
-    @WithMockUser(roles = "USER")
-    void create_returnsForbiddenWhenNotAdmin() throws Exception {
-        String json = "{\"title\":\"タイトル\",\"content\":\"本文\"}";
-
-        mockMvc.perform(
-                        post("/api/v1/articles")
-                                .with(csrf())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(json))
-                .andExpect(status().isForbidden());
-        verify(articleService, never()).create(any());
+        verify(articleService, never()).create(any(), any());
     }
 
     @Test
     @DisplayName("POST /api/v1/articles: title が空の場合 400 とバリデーションエラー")
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void create_returnsBadRequestWhenTitleBlank() throws Exception {
         String json = "{\"title\":\"\",\"content\":\"本文\"}";
 
@@ -159,12 +165,12 @@ class ArticleControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(
                         jsonPath("$.message").value(org.hamcrest.Matchers.containsString("title")));
-        verify(articleService, never()).create(any());
+        verify(articleService, never()).create(any(), any());
     }
 
     @Test
     @DisplayName("POST /api/v1/articles: content が空の場合 400")
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void create_returnsBadRequestWhenContentBlank() throws Exception {
         String json = "{\"title\":\"タイトル\",\"content\":\"\"}";
 
@@ -181,7 +187,7 @@ class ArticleControllerTest {
 
     @Test
     @DisplayName("POST /api/v1/articles: title が 201 文字の場合 400（@Size(max=200) に違反）")
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void create_returnsBadRequestWhenTitleTooLong() throws Exception {
         String longTitle = "あ".repeat(201);
         String json = "{\"title\":\"" + longTitle + "\",\"content\":\"本文\"}";
@@ -198,10 +204,10 @@ class ArticleControllerTest {
 
     @Test
     @DisplayName("PUT /api/v1/articles/{id}: 正常な更新で 200 OK")
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(username = "user1", roles = "USER")
     void update_returnsOk() throws Exception {
         ArticleRequest request = new ArticleRequest("更新後", "更新本文");
-        when(articleService.update(eq(1L), any(ArticleRequest.class)))
+        when(articleService.update(eq(1L), any(ArticleRequest.class), eq("user1")))
                 .thenReturn(sampleResponse(1L));
 
         mockMvc.perform(
@@ -214,11 +220,27 @@ class ArticleControllerTest {
     }
 
     @Test
+    @DisplayName("PUT /api/v1/articles/{id}: 他ユーザーの記事を編集しようとした場合 403")
+    @WithMockUser(username = "other", roles = "USER")
+    void update_returnsForbiddenWhenNotOwner() throws Exception {
+        ArticleRequest request = new ArticleRequest("更新後", "更新本文");
+        when(articleService.update(eq(1L), any(ArticleRequest.class), eq("other")))
+                .thenThrow(new AccessDeniedException("この操作を行う権限がありません"));
+
+        mockMvc.perform(
+                        put("/api/v1/articles/1")
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("PUT /api/v1/articles/{id}: 対象が存在しない場合 404")
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(username = "user1", roles = "USER")
     void update_returnsNotFound() throws Exception {
         ArticleRequest request = new ArticleRequest("更新後", "更新本文");
-        when(articleService.update(eq(99L), any(ArticleRequest.class)))
+        when(articleService.update(eq(99L), any(ArticleRequest.class), eq("user1")))
                 .thenThrow(new ArticleNotFoundException(99L));
 
         mockMvc.perform(
@@ -232,21 +254,33 @@ class ArticleControllerTest {
 
     @Test
     @DisplayName("DELETE /api/v1/articles/{id}: 正常削除で 204 No Content")
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(username = "user1", roles = "USER")
     void delete_returnsNoContent() throws Exception {
-        doNothing().when(articleService).delete(1L);
+        doNothing().when(articleService).delete(1L, "user1");
 
         mockMvc.perform(delete("/api/v1/articles/1").with(csrf()))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
-        verify(articleService).delete(1L);
+        verify(articleService).delete(1L, "user1");
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/articles/{id}: 他ユーザーの記事を削除しようとした場合 403")
+    @WithMockUser(username = "other", roles = "USER")
+    void delete_returnsForbiddenWhenNotOwner() throws Exception {
+        doThrow(new AccessDeniedException("この操作を行う権限がありません"))
+                .when(articleService)
+                .delete(1L, "other");
+
+        mockMvc.perform(delete("/api/v1/articles/1").with(csrf()))
+                .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("DELETE /api/v1/articles/{id}: 対象が存在しない場合 404")
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(username = "user1", roles = "USER")
     void delete_returnsNotFound() throws Exception {
-        doThrow(new ArticleNotFoundException(99L)).when(articleService).delete(99L);
+        doThrow(new ArticleNotFoundException(99L)).when(articleService).delete(99L, "user1");
 
         mockMvc.perform(delete("/api/v1/articles/99").with(csrf()))
                 .andExpect(status().isNotFound())

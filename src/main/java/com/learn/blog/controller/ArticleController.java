@@ -1,12 +1,12 @@
 package com.learn.blog.controller;
 
 import java.net.URI;
+import java.security.Principal;
 import java.util.List;
 
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,24 +41,26 @@ public class ArticleController {
         return articleService.findById(id);
     }
 
+    // 認証済みユーザーなら誰でも記事を作成できる。SecurityConfig の anyRequest().authenticated() で担保
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ArticleResponse> create(@Valid @RequestBody ArticleRequest request) {
-        ArticleResponse created = articleService.create(request);
+    public ResponseEntity<ArticleResponse> create(
+            @Valid @RequestBody ArticleRequest request, Principal principal) {
+        ArticleResponse created = articleService.create(request, principal.getName());
         return ResponseEntity.created(URI.create("/api/v1/articles/" + created.id())).body(created);
     }
 
+    // 所有者チェックは ArticleService 内で行う（ADMIN は全記事編集可）
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ArticleResponse update(
-            @PathVariable Long id, @Valid @RequestBody ArticleRequest request) {
-        return articleService.update(id, request);
+            @PathVariable Long id,
+            @Valid @RequestBody ArticleRequest request,
+            Principal principal) {
+        return articleService.update(id, request, principal.getName());
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        articleService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id, Principal principal) {
+        articleService.delete(id, principal.getName());
         return ResponseEntity.noContent().build();
     }
 }
