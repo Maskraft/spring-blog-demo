@@ -87,11 +87,11 @@ MySQL の接続情報（開発用・`docker-compose.yml` 参照）：
 |--------|-------------------|-----------|------|
 | GET    | `/api/v1/articles`      | 公開        | 記事一覧 |
 | GET    | `/api/v1/articles/{id}` | 公開        | 記事詳細 |
-| POST   | `/api/v1/articles`      | **ADMIN** | 記事作成 |
-| PUT    | `/api/v1/articles/{id}` | **ADMIN** | 記事更新 |
-| DELETE | `/api/v1/articles/{id}` | **ADMIN** | 記事削除 |
+| POST   | `/api/v1/articles`      | 認証済み | 記事作成 |
+| PUT    | `/api/v1/articles/{id}` | 認証済み（自分の記事のみ。ADMIN は全記事可） | 記事更新 |
+| DELETE | `/api/v1/articles/{id}` | 認証済み（自分の記事のみ。ADMIN は全記事可） | 記事削除 |
 
-**記事フィールド**：`id`, `title`, `content`, `createdAt`（サーバー側で自動生成）
+**記事フィールド**：`id`, `title`, `content`, `createdAt`（サーバー側で自動生成）、`authorUsername`
 **ユーザーフィールド**：`id`, `username`, `role`（`password` はレスポンスに含まれない）
 
 ## 認証・認可
@@ -100,7 +100,7 @@ MySQL の接続情報（開発用・`docker-compose.yml` 参照）：
 - **パスワード保存**：BCrypt ハッシュ化（strength=10）。平文は DB に保存されない。
 - **CSRF 対策**：`CookieCsrfTokenRepository` により `XSRF-TOKEN` Cookie を発行。書き込み系リクエスト（POST/PUT/DELETE/PATCH）では Cookie の値を `X-XSRF-TOKEN` ヘッダに載せて送信する必要がある。GET 系は対象外。
 - **セッション固定攻撃対策**：ログイン成功時に旧セッションを破棄し新しいセッション ID を発行する。
-- **ロール**：`USER`（`/register` で作成されるデフォルト）と `ADMIN`（記事 CRUD 権限を持つ）の2種類。ロール昇格 API は提供しないため、`USER` を `ADMIN` に昇格させる場合は DB を直接更新する。
+- **ロール**：`USER`（`/register` で作成されるデフォルト）と `ADMIN` の2種類。`USER` は自分が作成した記事の CRUD が可能。`ADMIN` は全記事の CRUD が可能。ロール昇格 API は提供しないため、`USER` を `ADMIN` に昇格させる場合は DB を直接更新する。
 
 ### 開発用の初期管理者
 
@@ -197,9 +197,9 @@ mvn spotless:check                          # 書式違反の検出のみ
 
 | テストクラス | 件数 | 目的 |
 |------|------|------|
-| `ArticleServiceTest` | 9 | Mockito による Service 層の単体テスト |
+| `ArticleServiceTest` | 13 | Mockito による Service 層の単体テスト（所有者チェック・ADMIN 全件操作含む） |
 | `AuthServiceTest` | 4 | Mockito による認証 Service 層の単体テスト（重複拒否・USER ロール固定・ハッシュ化） |
-| `ArticleControllerTest` | 13 | `@WebMvcTest` + MockMvc による HTTP 層テスト（認可: 401/403 含む） |
+| `ArticleControllerTest` | 15 | `@WebMvcTest` + MockMvc による HTTP 層テスト（認可: 401/403・所有者チェック含む） |
 | `AuthControllerTest` | 11 | `@WebMvcTest` + MockMvc による認証 API テスト（/register, /login, /me, /logout + CSRF 検証） |
 | `ArchitectureTest` | 6 | ArchUnit によるアーキテクチャ制約（レイヤー依存・パッケージ配置・`@Transactional` 配置） |
 | `ArticleApiDocumentation` | 7 | Spring REST Docs による API ドキュメント用スニペット生成 |
@@ -234,7 +234,7 @@ curl.exe "http://localhost:8080/api/v1/articles"
 curl.exe "http://localhost:8080/api/v1/articles/1"
 ```
 
-### 書き込み系（ADMIN 認証 + CSRF トークンが必要）
+### 書き込み系（認証済みユーザー + CSRF トークンが必要）
 
 書き込み系リクエストは **Session Cookie** と **CSRF トークン** の両方を送る必要があります。以下の 3 ステップを踏みます：
 
@@ -284,7 +284,7 @@ curl.exe -X POST "http://localhost:8080/api/v1/auth/register" `
   -d "{\"username\":\"alice\",\"password\":\"password123\"}"
 ```
 
-> `/register` で作成されたユーザーは常に `USER` ロールとなり、記事 CRUD はできません。記事を書くには DB を直接更新して `ADMIN` に昇格させるか、seed された `admin` ユーザーでログインしてください。
+> `/register` で作成されたユーザーは `USER` ロールとなり、自分の記事の作成・編集・削除が可能です。`ADMIN` ユーザーは全記事を操作できます。
 
 ## 開発時の注意点
 
