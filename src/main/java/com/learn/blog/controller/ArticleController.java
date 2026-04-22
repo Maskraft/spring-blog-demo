@@ -1,12 +1,12 @@
 package com.learn.blog.controller;
 
 import java.net.URI;
-import java.security.Principal;
 import java.util.List;
 
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,8 +44,8 @@ public class ArticleController {
     // 認証済みユーザーなら誰でも記事を作成できる。SecurityConfig の anyRequest().authenticated() で担保
     @PostMapping
     public ResponseEntity<ArticleResponse> create(
-            @Valid @RequestBody ArticleRequest request, Principal principal) {
-        ArticleResponse created = articleService.create(request, principal.getName());
+            @Valid @RequestBody ArticleRequest request, Authentication authentication) {
+        ArticleResponse created = articleService.create(request, authentication.getName());
         return ResponseEntity.created(URI.create("/api/v1/articles/" + created.id())).body(created);
     }
 
@@ -54,13 +54,13 @@ public class ArticleController {
     public ArticleResponse update(
             @PathVariable Long id,
             @Valid @RequestBody ArticleRequest request,
-            Principal principal) {
-        return articleService.update(id, request, principal.getName());
+            Authentication authentication) {
+        return articleService.update(id, request, authentication);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id, Principal principal) {
-        articleService.delete(id, principal.getName());
+    public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
+        articleService.delete(id, authentication);
         return ResponseEntity.noContent().build();
     }
 }

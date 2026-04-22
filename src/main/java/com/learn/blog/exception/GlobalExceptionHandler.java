@@ -41,8 +41,8 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException ex) {
         String message =
                 ex.getBindingResult().getFieldErrors().stream()
+                        .findFirst()
                         .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
-                        .reduce((a, b) -> a + "; " + b)
                         .orElse("パラメータの検証に失敗しました");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(buildBody(HttpStatus.BAD_REQUEST, message));

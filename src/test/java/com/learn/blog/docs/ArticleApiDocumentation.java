@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -156,7 +157,7 @@ class ArticleApiDocumentation {
     @DisplayName("PUT /api/v1/articles/{id}: 更新のドキュメント")
     void updateArticle() throws Exception {
         ArticleRequest request = new ArticleRequest("更新後タイトル", "更新後本文");
-        when(articleService.update(eq(1L), any(ArticleRequest.class), eq("admin")))
+        when(articleService.update(eq(1L), any(ArticleRequest.class), any(Authentication.class)))
                 .thenReturn(sampleResponse(1L));
 
         mockMvc.perform(
@@ -183,7 +184,7 @@ class ArticleApiDocumentation {
     @Test
     @DisplayName("DELETE /api/v1/articles/{id}: 削除のドキュメント")
     void deleteArticle() throws Exception {
-        doNothing().when(articleService).delete(1L, "admin");
+        doNothing().when(articleService).delete(eq(1L), any(Authentication.class));
 
         mockMvc.perform(delete("/api/v1/articles/{id}", 1L).with(csrf()))
                 .andExpect(status().isNoContent())

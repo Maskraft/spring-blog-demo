@@ -27,6 +27,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -207,7 +208,7 @@ class ArticleControllerTest {
     @WithMockUser(username = "user1", roles = "USER")
     void update_returnsOk() throws Exception {
         ArticleRequest request = new ArticleRequest("更新後", "更新本文");
-        when(articleService.update(eq(1L), any(ArticleRequest.class), eq("user1")))
+        when(articleService.update(eq(1L), any(ArticleRequest.class), any(Authentication.class)))
                 .thenReturn(sampleResponse(1L));
 
         mockMvc.perform(
@@ -224,7 +225,7 @@ class ArticleControllerTest {
     @WithMockUser(username = "other", roles = "USER")
     void update_returnsForbiddenWhenNotOwner() throws Exception {
         ArticleRequest request = new ArticleRequest("更新後", "更新本文");
-        when(articleService.update(eq(1L), any(ArticleRequest.class), eq("other")))
+        when(articleService.update(eq(1L), any(ArticleRequest.class), any(Authentication.class)))
                 .thenThrow(new AccessDeniedException("この操作を行う権限がありません"));
 
         mockMvc.perform(
@@ -240,7 +241,7 @@ class ArticleControllerTest {
     @WithMockUser(username = "user1", roles = "USER")
     void update_returnsNotFound() throws Exception {
         ArticleRequest request = new ArticleRequest("更新後", "更新本文");
-        when(articleService.update(eq(99L), any(ArticleRequest.class), eq("user1")))
+        when(articleService.update(eq(99L), any(ArticleRequest.class), any(Authentication.class)))
                 .thenThrow(new ArticleNotFoundException(99L));
 
         mockMvc.perform(
@@ -256,12 +257,12 @@ class ArticleControllerTest {
     @DisplayName("DELETE /api/v1/articles/{id}: 正常削除で 204 No Content")
     @WithMockUser(username = "user1", roles = "USER")
     void delete_returnsNoContent() throws Exception {
-        doNothing().when(articleService).delete(1L, "user1");
+        doNothing().when(articleService).delete(eq(1L), any(Authentication.class));
 
         mockMvc.perform(delete("/api/v1/articles/1").with(csrf()))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
-        verify(articleService).delete(1L, "user1");
+        verify(articleService).delete(eq(1L), any(Authentication.class));
     }
 
     @Test
@@ -270,7 +271,7 @@ class ArticleControllerTest {
     void delete_returnsForbiddenWhenNotOwner() throws Exception {
         doThrow(new AccessDeniedException("この操作を行う権限がありません"))
                 .when(articleService)
-                .delete(1L, "other");
+                .delete(eq(1L), any(Authentication.class));
 
         mockMvc.perform(delete("/api/v1/articles/1").with(csrf()))
                 .andExpect(status().isForbidden());
@@ -280,7 +281,9 @@ class ArticleControllerTest {
     @DisplayName("DELETE /api/v1/articles/{id}: 対象が存在しない場合 404")
     @WithMockUser(username = "user1", roles = "USER")
     void delete_returnsNotFound() throws Exception {
-        doThrow(new ArticleNotFoundException(99L)).when(articleService).delete(99L, "user1");
+        doThrow(new ArticleNotFoundException(99L))
+                .when(articleService)
+                .delete(eq(99L), any(Authentication.class));
 
         mockMvc.perform(delete("/api/v1/articles/99").with(csrf()))
                 .andExpect(status().isNotFound())

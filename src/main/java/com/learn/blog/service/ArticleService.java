@@ -3,13 +3,13 @@ package com.learn.blog.service;
 import java.util.List;
 
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.learn.blog.dto.ArticleRequest;
 import com.learn.blog.dto.ArticleResponse;
 import com.learn.blog.entity.Article;
-import com.learn.blog.entity.Role;
 import com.learn.blog.entity.User;
 import com.learn.blog.exception.ArticleNotFoundException;
 import com.learn.blog.repository.ArticleRepository;
@@ -47,30 +47,30 @@ public class ArticleService {
         return ArticleResponse.from(articleRepository.save(article));
     }
 
-    public ArticleResponse update(Long id, ArticleRequest request, String username) {
+    public ArticleResponse update(Long id, ArticleRequest request, Authentication authentication) {
         Article article = getArticle(id);
-        checkOwnership(article, username);
+        checkOwnership(article, authentication);
         article.setTitle(request.title());
         article.setContent(request.content());
         return ArticleResponse.from(articleRepository.save(article));
     }
 
-    public void delete(Long id, String username) {
+    public void delete(Long id, Authentication authentication) {
         Article article = getArticle(id);
-        checkOwnership(article, username);
+        checkOwnership(article, authentication);
         articleRepository.deleteById(id);
     }
 
     // 記事の所有者またはADMINかチェックする。違反時は AccessDeniedException をスロー
-    private void checkOwnership(Article article, String username) {
-        User user =
-                userRepository
-                        .findByUsername(username)
-                        .orElseThrow(() -> new IllegalStateException("ユーザーが見つかりません: " + username));
-        if (user.getRole() == Role.ADMIN) {
+    // DB クエリを避けるため Authentication の authorities から ADMIN ロールを判定する
+    private void checkOwnership(Article article, Authentication authentication) {
+        boolean isAdmin =
+                authentication.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (isAdmin) {
             return;
         }
-        if (!article.getAuthor().getUsername().equals(username)) {
+        if (!article.getAuthor().getUsername().equals(authentication.getName())) {
             throw new AccessDeniedException("この操作を行う権限がありません");
         }
     }

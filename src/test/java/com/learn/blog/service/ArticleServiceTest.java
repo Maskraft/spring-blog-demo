@@ -19,6 +19,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import com.learn.blog.dto.ArticleRequest;
 import com.learn.blog.dto.ArticleResponse;
@@ -42,6 +45,11 @@ class ArticleServiceTest {
         User user = new User(username, "hashed", role);
         user.setId(id);
         return user;
+    }
+
+    private Authentication auth(String username, String role) {
+        return new UsernamePasswordAuthenticationToken(
+                username, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
     // テスト用の Article を作成（id・createdAt・author を明示的に設定）
@@ -127,10 +135,9 @@ class ArticleServiceTest {
         Article existing = newArticle(1L, "旧タイトル", "旧本文", author);
         ArticleRequest request = new ArticleRequest("新タイトル", "新本文");
         when(articleRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(author));
         when(articleRepository.save(existing)).thenReturn(existing);
 
-        ArticleResponse result = articleService.update(1L, request, "user1");
+        ArticleResponse result = articleService.update(1L, request, auth("user1", "USER"));
 
         assertThat(result.title()).isEqualTo("新タイトル");
         assertThat(result.content()).isEqualTo("新本文");
@@ -141,14 +148,12 @@ class ArticleServiceTest {
     @DisplayName("update: ADMIN は他ユーザーの記事も更新できる")
     void update_allowsAdminToUpdateOthersArticle() {
         User author = newUser(1L, "user1", Role.USER);
-        User admin = newUser(2L, "admin", Role.ADMIN);
         Article existing = newArticle(1L, "旧タイトル", "旧本文", author);
         ArticleRequest request = new ArticleRequest("新タイトル", "新本文");
         when(articleRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
         when(articleRepository.save(existing)).thenReturn(existing);
 
-        ArticleResponse result = articleService.update(1L, request, "admin");
+        ArticleResponse result = articleService.update(1L, request, auth("admin", "ADMIN"));
 
         assertThat(result.title()).isEqualTo("新タイトル");
     }
@@ -157,13 +162,11 @@ class ArticleServiceTest {
     @DisplayName("update: 他ユーザーの記事を更新しようとすると AccessDeniedException")
     void update_throwsWhenNotOwner() {
         User author = newUser(1L, "user1", Role.USER);
-        User other = newUser(2L, "other", Role.USER);
         Article existing = newArticle(1L, "タイトル", "本文", author);
         ArticleRequest request = new ArticleRequest("新タイトル", "新本文");
         when(articleRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(userRepository.findByUsername("other")).thenReturn(Optional.of(other));
 
-        assertThatThrownBy(() -> articleService.update(1L, request, "other"))
+        assertThatThrownBy(() -> articleService.update(1L, request, auth("other", "USER")))
                 .isInstanceOf(AccessDeniedException.class);
         verify(articleRepository, never()).save(any());
     }
@@ -174,7 +177,7 @@ class ArticleServiceTest {
         ArticleRequest request = new ArticleRequest("タイトル", "本文");
         when(articleRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> articleService.update(99L, request, "user1"))
+        assertThatThrownBy(() -> articleService.update(99L, request, auth("user1", "USER")))
                 .isInstanceOf(ArticleNotFoundException.class);
         verify(articleRepository, never()).save(any());
     }
@@ -185,9 +188,8 @@ class ArticleServiceTest {
         User author = newUser(1L, "user1", Role.USER);
         Article article = newArticle(1L, "タイトル", "本文", author);
         when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(author));
 
-        articleService.delete(1L, "user1");
+        articleService.delete(1L, auth("user1", "USER"));
 
         verify(articleRepository, times(1)).deleteById(1L);
     }
@@ -196,12 +198,10 @@ class ArticleServiceTest {
     @DisplayName("delete: ADMIN は他ユーザーの記事も削除できる")
     void delete_allowsAdminToDeleteOthersArticle() {
         User author = newUser(1L, "user1", Role.USER);
-        User admin = newUser(2L, "admin", Role.ADMIN);
         Article article = newArticle(1L, "タイトル", "本文", author);
         when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
 
-        articleService.delete(1L, "admin");
+        articleService.delete(1L, auth("admin", "ADMIN"));
 
         verify(articleRepository, times(1)).deleteById(1L);
     }
@@ -210,12 +210,10 @@ class ArticleServiceTest {
     @DisplayName("delete: 他ユーザーの記事を削除しようとすると AccessDeniedException")
     void delete_throwsWhenNotOwner() {
         User author = newUser(1L, "user1", Role.USER);
-        User other = newUser(2L, "other", Role.USER);
         Article article = newArticle(1L, "タイトル", "本文", author);
         when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
-        when(userRepository.findByUsername("other")).thenReturn(Optional.of(other));
 
-        assertThatThrownBy(() -> articleService.delete(1L, "other"))
+        assertThatThrownBy(() -> articleService.delete(1L, auth("other", "USER")))
                 .isInstanceOf(AccessDeniedException.class);
         verify(articleRepository, never()).deleteById(any());
     }
@@ -225,7 +223,7 @@ class ArticleServiceTest {
     void delete_throwsWhenNotFound() {
         when(articleRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> articleService.delete(99L, "user1"))
+        assertThatThrownBy(() -> articleService.delete(99L, auth("user1", "USER")))
                 .isInstanceOf(ArticleNotFoundException.class)
                 .hasMessageContaining("id=99");
         verify(articleRepository, never()).deleteById(any());
